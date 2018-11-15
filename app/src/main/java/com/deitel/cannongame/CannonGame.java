@@ -32,7 +32,7 @@ public class CannonGame extends Activity {
         cannonView = (CannonView) findViewById(R.id.cannonView);
 
         //initialize the GestureDetector
-        //gestureDector = new GestureDetector(this,gestureListener);
+        gestureDector = new GestureDetector(this,gestureListener);
 
         //allow volume keys to set game volume
         setVolumeControlStream(AudioManager.STREAM_MUSIC);

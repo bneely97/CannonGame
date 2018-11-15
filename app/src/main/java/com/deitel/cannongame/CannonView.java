@@ -2,6 +2,7 @@ package com.deitel.cannongame;
 
 import android.app.Activity;
 import android.content.Context;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Point;
 import android.media.AudioManager;
@@ -120,5 +121,54 @@ public class CannonView extends SurfaceView
         double angle = 0;
 
         return angle;
+    }
+
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged( w, h, oldw, oldh);
+        screenWidth=w;
+        screenHeight=h;
+        cannonBaseRadius = h / 18;
+        cannonLength = w / 8;
+        cannonballRadius = w / 38;
+        cannonballSpeed = w * 3 / 2;
+        lineWidth = w / 24;
+        blockerDistance = w*5/8; blockerBeginning = h/8; blockerEnd = h*3/8;
+        targetDistance = w*7/8; targetBeginning = h/8; targetEnd = h*7/8;
+        pieceLength = (targetEnd-targetBeginning) / TARGET_PIECES;
+        initialTargetVelocity = -h/4;
+        target.start = new Point(targetDistance, targetBeginning);
+        target.end = new Point(targetDistance, targetEnd);
+        barrelEnd = new Point(cannonLength, h/2);
+        textPaint.setTextSize(w / 20);
+        textPaint.setAntiAlias(true);
+        cannonPaint.setStrokeWidth(lineWidth*1.5f);
+        blockerPaint.setStrokeWidth(lineWidth);
+        targetPaint.setStrokeWidth(lineWidth);
+        backgroundPaint.setColor(Color.WHITE);
+
+        newGame();
+    }
+
+    public void newGame() {
+        for (int i=0;i<TARGET_PIECES;i++) hitStates[i]=false;
+
+        targetPiecesHit=0;
+        blockerVelocity=initialBlockerVelocity;
+        targetVelocity=initialTargetVelocity;
+        timeLeft=10;
+        cannonballOnScreen = false;
+        shotsFired=0;
+        totalTimeElapsed=0.0;
+        blocker.start.set(blockerDistance, blockerBeginning);
+        blocker.end.set(blockerDistance, blockerEnd);
+        target.start.set(targetDistance, targetDistance);
+        target.end.set(targetDistance, targetEnd);
+
+        if (gameOver) {
+            gameOver = false;
+            cannonThread = new CannonThread(getHolder());
+            cannonThread.start();
+        }
     }
 }
