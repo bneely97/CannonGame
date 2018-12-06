@@ -178,6 +178,7 @@ public class CannonView extends SurfaceView
         cannonballRadius = w / 38;
         cannonballSpeed = w * 3 / 2;
         lineWidth = w / 24;
+        initialBlockerVelocity = (h/2);
         blockerDistance = w*5/8; blockerBeginning = h/8; blockerEnd = h*3/8;
         targetDistance = w*7/8; targetBeginning = h/8; targetEnd = h*7/8;
         pieceLength = (targetEnd-targetBeginning) / TARGET_PIECES;
@@ -207,7 +208,7 @@ public class CannonView extends SurfaceView
         totalTimeElapsed=0.0;
         blocker.start.set(blockerDistance, blockerBeginning);
         blocker.end.set(blockerDistance, blockerEnd);
-        target.start.set(targetDistance, targetDistance);
+        target.start.set(targetDistance, targetBeginning);
         target.end.set(targetDistance, targetEnd);
 
         if (gameOver) {
@@ -323,7 +324,7 @@ public class CannonView extends SurfaceView
 
         // display number of shots fired and total time elapsed
         dialogBuilder.setMessage(getResources().getString(
-                R.string.result_format, shotsFired, totalTimeElapsed));
+                R.string.results_format, shotsFired, totalTimeElapsed));
         dialogBuilder.setPositiveButton(R.string.reset_game,
                 new DialogInterface.OnClickListener()
                 {
@@ -479,3 +480,4 @@ public class CannonView extends SurfaceView
     }
 
 } // end CannonView
+
