@@ -1,7 +1,8 @@
 <resources>
 
     <string name="app_name">Cannon Game</string>
-    <string name="results_format">Level: %1$d\nShots fired %1$d\nTotal time: %2$.1f</string>
+    <string name="results_format">Level: %1$d\nShots fired %2$d\nTotal time: %3$.1f</string>
+    <string name="next_level">Move on to the next level?</string>
     <string name="reset_game">Reset Game</string>
     <string name="win">You win!</string>
     <string name="lose">You lose!</string>

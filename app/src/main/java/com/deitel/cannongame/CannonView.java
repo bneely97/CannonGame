@@ -45,7 +45,7 @@ public class CannonView extends SurfaceView
     private int initialBlockerVelocity; //initial speed multiplier
     private float blockerVelocity; //speed multiplier during game
     private int initialBlockerDistance;
-    private boolean bHit;
+    private boolean cannonBaseBoing;
     private Line target; //start and end points
     private int targetDistance; //distance from the left
     private int targetBeginning; //distance from top
@@ -76,6 +76,7 @@ public class CannonView extends SurfaceView
     private static final int CANNON_SOUND_ID = 1;
     private static final int BLOCKER_SOUND_ID = 2;
     private static final int BOING_SOUND_ID = 3;
+    private static final int GAME_OVER_SOUND_ID = 4;
     private SoundPool soundPool;
     private Map<Integer, Integer> soundMap;
 
@@ -106,6 +107,7 @@ public class CannonView extends SurfaceView
         soundMap.put(CANNON_SOUND_ID, soundPool.load(context, R.raw.cannon_fire, 1));
         soundMap.put(BLOCKER_SOUND_ID, soundPool.load(context, R.raw.blocker_hit, 1));
         soundMap.put(BOING_SOUND_ID, soundPool.load(context, R.raw.boing, 1));
+        soundMap.put(GAME_OVER_SOUND_ID, soundPool.load(context, R.raw.gameover, 1));
 
         textPaint = new Paint();
         cannonPaint = new Paint();
@@ -183,10 +185,10 @@ public class CannonView extends SurfaceView
         cannonballRadius = w / 38;
         cannonballSpeed = w * 3 / 2;
         lineWidth = w / 24;
-        initialBlockerVelocity = (h/2); initialBlockerDistance = (w * 5 / 8);
-        blockerDistance = w*5/8; blockerBeginning = h/8; blockerEnd = h*3/8;
-        targetDistance = w*7/8; targetBeginning = h/8; targetEnd = h*7/8;
-        pieceLength = (targetEnd-targetBeginning) / targetPieces;
+        initialBlockerVelocity = (h/2); initialBlockerDistance = ((w * 5) / 8);
+        blockerDistance = w*5/8; blockerBeginning = h/8; blockerEnd = ((h*3)/8);
+        targetDistance = ((w*7)/8); targetBeginning = h/8; targetEnd = ((h*7)/8);
+        pieceLength = ((targetEnd-targetBeginning) / targetPieces);
         initialTargetVelocity = -h/4;
         target.start = new Point(targetDistance, targetBeginning);
         target.end = new Point(targetDistance, targetEnd);
@@ -202,6 +204,7 @@ public class CannonView extends SurfaceView
     }
 
     public void newGame() {
+        hitStates = new boolean[targetPieces];
         for (int i = 0; i< targetPieces; i++) hitStates[i]=false;
 
         targetPiecesHit=0;
@@ -235,8 +238,7 @@ public class CannonView extends SurfaceView
 
     public void nextLevels() {
         blockerDistance=blockerDistance-100;
-        if (blockerDistance<200)
-            blockerDistance = 200;
+        if (blockerDistance<200) blockerDistance = 200;
         level++;
         targetPieces=targetPieces+2;
         hitReward--;
@@ -268,24 +270,28 @@ public class CannonView extends SurfaceView
 
                 // play blocker sound
                 soundPool.play(soundMap.get(BLOCKER_SOUND_ID), 1, 1, 1, 0, 1f);
+                cannonBaseBoing =true;
             } // end if
 
             // check for collisions with left and right walls
             else if (cannonball.x + cannonballRadius > screenWidth ||
-                    cannonball.x - cannonballRadius < 0)
+                    cannonball.x - cannonballRadius < 0) {
                 cannonballOnScreen = false; // remove cannonball from screen
-
+                cannonBaseBoing = false;
+            }
                 // check for collisions with top and bottom walls
             else if (cannonball.y + cannonballRadius > screenHeight ||
-                    cannonball.y - cannonballRadius < 0)
+                    cannonball.y - cannonballRadius < 0) {
                 cannonballOnScreen = false; // make the cannonball disappear
+                cannonBaseBoing =false;
+            }
 
             else if (cannonball.x + cannonballRadius < cannonBaseRadius &&
                     cannonball.y < (screenHeight/2) + cannonBaseRadius &&
                     cannonball.y > (screenHeight/2) - cannonBaseRadius &&
-                    bHit == true) {
+                    cannonBaseBoing == true) {
                 soundPool.play(soundMap.get(BOING_SOUND_ID), 1, 1, 1, 0, 1f);
-                bHit = false;
+                cannonBaseBoing = false;
             }
 
                 // check for cannonball collision with target
@@ -347,6 +353,7 @@ public class CannonView extends SurfaceView
             timeLeft = 0.0;
             gameOver = true; // the game is over
             cannonThread.setRunning(false);
+            soundPool.play(soundMap.get(GAME_OVER_SOUND_ID), 1, 1, 1, 0, 1f);
             showGameOverDialog(R.string.lose); // show the losing dialog
         } // end if
     }
@@ -359,8 +366,20 @@ public class CannonView extends SurfaceView
         dialogBuilder.setCancelable(false);
 
         // display number of shots fired and total time elapsed
-        dialogBuilder.setMessage(getResources().getString(R.string.results_format, level, shotsFired, totalTimeElapsed));
+        dialogBuilder.setMessage(getResources().getString
+                (R.string.results_format, level, shotsFired, totalTimeElapsed));
         if (messageId==R.string.win) {
+            dialogBuilder.setPositiveButton(R.string.next_level,
+                    new DialogInterface.OnClickListener() {
+                        // called when "Reset Game" Button is pressed
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            dialogIsDisplayed = false;
+                            nextLevels(); // set up and start a new game
+                        } // end method onClick
+                    } // end anonymous inner class
+            ); // end call to setPositiveButton
+        } else {
             dialogBuilder.setPositiveButton(R.string.reset_game,
                     new DialogInterface.OnClickListener() {
                         // called when "Reset Game" Button is pressed
@@ -372,7 +391,6 @@ public class CannonView extends SurfaceView
                     } // end anonymous inner class
             ); // end call to setPositiveButton
         }
-
         activity.runOnUiThread(
                 new Runnable() {
                     public void run()
