@@ -26,9 +26,10 @@ public class CannonView extends SurfaceView
     private boolean dialogIsDisplayed = false;
 
     // constants for gameplay
-    private static final int TARGET_PIECES = 7; //sections in the target
-    private static final int MISS_PENALTY = 2; // seconds deducted on a miss
-    private static final int HIT_REWARD = 3; //seconds added on a hit
+    private int level = 1;
+    private int targetPieces = 5; //sections in the target
+    private int missPenalty; // seconds deducted on a miss
+    private int hitReward; //seconds added on a hit
 
     // variables for the game loop and tacking stats
     private boolean gameOver;
@@ -43,6 +44,8 @@ public class CannonView extends SurfaceView
     private int blockerEnd; //bottom edge distance from top
     private int initialBlockerVelocity; //initial speed multiplier
     private float blockerVelocity; //speed multiplier during game
+    private int initialBlockerDistance;
+    private boolean bHit;
     private Line target; //start and end points
     private int targetDistance; //distance from the left
     private int targetBeginning; //distance from top
@@ -72,6 +75,7 @@ public class CannonView extends SurfaceView
     private static final int TARGET_SOUND_ID = 0;
     private static final int CANNON_SOUND_ID = 1;
     private static final int BLOCKER_SOUND_ID = 2;
+    private static final int BOING_SOUND_ID = 3;
     private SoundPool soundPool;
     private Map<Integer, Integer> soundMap;
 
@@ -93,7 +97,7 @@ public class CannonView extends SurfaceView
         target = new Line();
         cannonball = new Point();
 
-        hitStates = new boolean[TARGET_PIECES];
+        hitStates = new boolean[targetPieces];
 
         soundPool = new SoundPool(1, AudioManager.STREAM_MUSIC, 0);
 
@@ -101,6 +105,7 @@ public class CannonView extends SurfaceView
         soundMap.put(TARGET_SOUND_ID, soundPool.load(context, R.raw.target_hit, 1));
         soundMap.put(CANNON_SOUND_ID, soundPool.load(context, R.raw.cannon_fire, 1));
         soundMap.put(BLOCKER_SOUND_ID, soundPool.load(context, R.raw.blocker_hit, 1));
+        soundMap.put(BOING_SOUND_ID, soundPool.load(context, R.raw.boing, 1));
 
         textPaint = new Paint();
         cannonPaint = new Paint();
@@ -178,10 +183,10 @@ public class CannonView extends SurfaceView
         cannonballRadius = w / 38;
         cannonballSpeed = w * 3 / 2;
         lineWidth = w / 24;
-        initialBlockerVelocity = (h/2);
+        initialBlockerVelocity = (h/2); initialBlockerDistance = (w * 5 / 8);
         blockerDistance = w*5/8; blockerBeginning = h/8; blockerEnd = h*3/8;
         targetDistance = w*7/8; targetBeginning = h/8; targetEnd = h*7/8;
-        pieceLength = (targetEnd-targetBeginning) / TARGET_PIECES;
+        pieceLength = (targetEnd-targetBeginning) / targetPieces;
         initialTargetVelocity = -h/4;
         target.start = new Point(targetDistance, targetBeginning);
         target.end = new Point(targetDistance, targetEnd);
@@ -197,12 +202,12 @@ public class CannonView extends SurfaceView
     }
 
     public void newGame() {
-        for (int i=0;i<TARGET_PIECES;i++) hitStates[i]=false;
+        for (int i = 0; i< targetPieces; i++) hitStates[i]=false;
 
         targetPiecesHit=0;
         blockerVelocity=initialBlockerVelocity;
         targetVelocity=initialTargetVelocity;
-        timeLeft=10;
+        timeLeft=60;
         cannonballOnScreen = false;
         shotsFired=0;
         totalTimeElapsed=0.0;
@@ -211,11 +216,34 @@ public class CannonView extends SurfaceView
         target.start.set(targetDistance, targetBeginning);
         target.end.set(targetDistance, targetEnd);
 
-        if (gameOver) {
-            gameOver = false;
+
+        if (gameOver || level != 1) {
+            pieceLength = (targetEnd - targetBeginning) / targetPieces;
             cannonThread = new CannonThread(getHolder());
             cannonThread.start();
         }
+    }
+
+    public void initialLevel() {
+        blockerDistance=initialBlockerDistance;
+        level = 1;
+        targetPieces=5;
+        hitReward=3;
+        missPenalty=2;
+        newGame();
+    }
+
+    public void nextLevels() {
+        blockerDistance=blockerDistance-100;
+        if (blockerDistance<200)
+            blockerDistance = 200;
+        level++;
+        targetPieces=targetPieces+2;
+        hitReward--;
+        missPenalty++;
+        if (hitReward<0)
+            hitReward = 0;
+        newGame();
     }
 
     // called repeatedly by the CannonThread to update game elements
@@ -236,7 +264,7 @@ public class CannonView extends SurfaceView
                     cannonball.y - cannonballRadius < blocker.end.y)
             {
                 cannonballVelocityX *= -1; // reverse cannonball's direction
-                timeLeft -= MISS_PENALTY; // penalize the user
+                timeLeft -= missPenalty; // penalize the user
 
                 // play blocker sound
                 soundPool.play(soundMap.get(BLOCKER_SOUND_ID), 1, 1, 1, 0, 1f);
@@ -252,6 +280,14 @@ public class CannonView extends SurfaceView
                     cannonball.y - cannonballRadius < 0)
                 cannonballOnScreen = false; // make the cannonball disappear
 
+            else if (cannonball.x + cannonballRadius < cannonBaseRadius &&
+                    cannonball.y < (screenHeight/2) + cannonBaseRadius &&
+                    cannonball.y > (screenHeight/2) - cannonBaseRadius &&
+                    bHit == true) {
+                soundPool.play(soundMap.get(BOING_SOUND_ID), 1, 1, 1, 0, 1f);
+                bHit = false;
+            }
+
                 // check for cannonball collision with target
             else if (cannonball.x + cannonballRadius > targetDistance &&
                     cannonball.x - cannonballRadius < targetDistance &&
@@ -263,19 +299,19 @@ public class CannonView extends SurfaceView
                         (int) ((cannonball.y - target.start.y) / pieceLength);
 
                 // check if the piece hasn't been hit yet
-                if ((section >= 0 && section < TARGET_PIECES) &&
+                if ((section >= 0 && section < targetPieces) &&
                         !hitStates[section])
                 {
                     hitStates[section] = true; // section was hit
                     cannonballOnScreen = false; // remove cannonball
-                    timeLeft += HIT_REWARD; // add reward to remaining time
+                    timeLeft += hitReward; // add reward to remaining time
 
                     // play target hit sound
                     soundPool.play(soundMap.get(TARGET_SOUND_ID), 1,
                             1, 1, 0, 1f);
 
                     // if all pieces have been hit
-                    if (++targetPiecesHit == TARGET_PIECES)
+                    if (++targetPiecesHit == targetPieces)
                     {
                         cannonThread.setRunning(false);
                         showGameOverDialog(R.string.win); // show winning dialog
@@ -323,20 +359,19 @@ public class CannonView extends SurfaceView
         dialogBuilder.setCancelable(false);
 
         // display number of shots fired and total time elapsed
-        dialogBuilder.setMessage(getResources().getString(
-                R.string.results_format, shotsFired, totalTimeElapsed));
-        dialogBuilder.setPositiveButton(R.string.reset_game,
-                new DialogInterface.OnClickListener()
-                {
-                    // called when "Reset Game" Button is pressed
-                    @Override
-                    public void onClick(DialogInterface dialog, int which)
-                    {
-                        dialogIsDisplayed = false;
-                        newGame(); // set up and start a new game
-                    } // end method onClick
-                } // end anonymous inner class
-        ); // end call to setPositiveButton
+        dialogBuilder.setMessage(getResources().getString(R.string.results_format, level, shotsFired, totalTimeElapsed));
+        if (messageId==R.string.win) {
+            dialogBuilder.setPositiveButton(R.string.reset_game,
+                    new DialogInterface.OnClickListener() {
+                        // called when "Reset Game" Button is pressed
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            dialogIsDisplayed = false;
+                            initialLevel(); // set up and start a new game
+                        } // end method onClick
+                    } // end anonymous inner class
+            ); // end call to setPositiveButton
+        }
 
         activity.runOnUiThread(
                 new Runnable() {
@@ -382,7 +417,7 @@ public class CannonView extends SurfaceView
         currentPoint.y = target.start.y;
 
         // draw the target
-        for (int i = 1; i <= TARGET_PIECES; ++i)
+        for (int i = 1; i <= targetPieces; ++i)
         {
             // if this target piece is not hit, draw it
             if (!hitStates[i - 1])
