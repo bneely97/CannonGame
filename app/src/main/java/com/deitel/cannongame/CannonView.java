@@ -45,7 +45,7 @@ public class CannonView extends SurfaceView
     private int initialBlockerVelocity; //initial speed multiplier
     private float blockerVelocity; //speed multiplier during game
     private int initialBlockerDistance;
-    private boolean cannonBaseBoing;
+    private boolean allowBoing;
     private Line target; //start and end points
     private int targetDistance; //distance from the left
     private int targetBeginning; //distance from top
@@ -270,31 +270,28 @@ public class CannonView extends SurfaceView
 
                 // play blocker sound
                 soundPool.play(soundMap.get(BLOCKER_SOUND_ID), 1, 1, 1, 0, 1f);
-                cannonBaseBoing =true;
+                allowBoing =true;
             } // end if
 
             // check for collisions with left and right walls
             else if (cannonball.x + cannonballRadius > screenWidth ||
                     cannonball.x - cannonballRadius < 0) {
                 cannonballOnScreen = false; // remove cannonball from screen
-                cannonBaseBoing = false;
             }
-                // check for collisions with top and bottom walls
+            // check for collisions with top and bottom walls
             else if (cannonball.y + cannonballRadius > screenHeight ||
                     cannonball.y - cannonballRadius < 0) {
                 cannonballOnScreen = false; // make the cannonball disappear
-                cannonBaseBoing =false;
             }
 
             else if (cannonball.x + cannonballRadius < cannonBaseRadius &&
                     cannonball.y < (screenHeight/2) + cannonBaseRadius &&
                     cannonball.y > (screenHeight/2) - cannonBaseRadius &&
-                    cannonBaseBoing == true) {
+                    allowBoing == true) {
                 soundPool.play(soundMap.get(BOING_SOUND_ID), 1, 1, 1, 0, 1f);
-                cannonBaseBoing = false;
             }
 
-                // check for cannonball collision with target
+            // check for cannonball collision with target
             else if (cannonball.x + cannonballRadius > targetDistance &&
                     cannonball.x - cannonballRadius < targetDistance &&
                     cannonball.y + cannonballRadius > target.start.y &&
@@ -533,4 +530,3 @@ public class CannonView extends SurfaceView
     }
 
 } // end CannonView
-
